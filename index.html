@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Voronoi Mosaic with Responsive Sidebar (Version 11)</title>
+  <title>Voronoi Mosaic with Responsive Sidebar (Version 12)</title>
   <!-- Google Font: Open Sans -->
   <link
     href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap"
@@ -11,18 +11,17 @@
   />
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: "Open Sans", sans-serif;
-    }
+    /* Disable text selection / tap highlight on mobile */
     body {
       background-color: #1a1a1a;
       margin: 0;
       overflow: hidden;
       font-size: 12px;
-      cursor: pointer;
+      font-family: "Open Sans", sans-serif;
+      -webkit-user-select: none;      /* Disable text select iOS Safari */
+      -webkit-touch-callout: none;    /* Disable callout iOS Safari */
+      user-select: none;             /* Disable text select other browsers */
+      touch-action: pan-y;           /* Allow vertical scrolling if needed */
     }
     svg {
       display: block;
@@ -39,14 +38,13 @@
       color: #fff;
       transition: transform 0.3s ease;
       transform: translateX(-100%);
-      padding: 12px;
       overflow-y: auto;
       z-index: 999;
+      padding: 60px 12px 12px; /* Top padding so menu btn won't overlap */
     }
     .drawer.open {
       transform: translateX(0);
     }
-    /* Drawer Toggler Button */
     .drawer-toggle {
       position: fixed;
       top: 10px;
@@ -63,8 +61,8 @@
       background: #555;
     }
 
-    /* Sliders and toggles inside the drawer */
-    .slider-group, .toggle-group {
+    .slider-group,
+    .toggle-group {
       display: flex;
       flex-direction: column;
       margin-bottom: 12px;
@@ -88,7 +86,6 @@
       cursor: pointer;
     }
 
-    /* Responsive Drawer: show/hide button on small screens */
     @media (max-width: 768px) {
       .drawer {
         width: 260px;
@@ -161,13 +158,10 @@
 </div>
 
 <script>
-  /* Version 11:
-     Responsive with a sidebar drawer. 
-     Full fade approach from version 10. 
-  */
+  /* Version 12: Responsive with sidebar drawer, disabling text select overlay on mobile. */
 
   const F_TIME_MIN = 50,
-        F_TIME_MAX = 1500, 
+        F_TIME_MAX = 1500,
         DELAY_MIN  = 10,
         DELAY_MAX  = 500,
         TILES_MIN  = 50,
@@ -175,12 +169,12 @@
         HUE_SPEED_MIN = 1,
         HUE_SPEED_MAX = 3;
 
-  let TRANSITION_DURATION   = 1200;
-  let DELAY_BETWEEN_LAYERS  = 50;
-  let numPoints             = 400;
-  let hueShiftSpeed         = 1;
+  let TRANSITION_DURATION = 1200;
+  let DELAY_BETWEEN_LAYERS = 50;
+  let numPoints = 400;
+  let hueShiftSpeed = 1;
 
-  let width  = window.innerWidth;
+  let width = window.innerWidth;
   let height = window.innerHeight;
 
   const BASE_CYCLE_TIME = 10000;
@@ -190,19 +184,18 @@
   let startTime = 0;
   let baseColors = {};
 
-  // Drawer toggler
-  function toggleDrawer(){
+  function toggleDrawer() {
     const drawer = document.getElementById("drawer");
     drawer.classList.toggle("open");
   }
 
-  function getCycleTime(){
+  function getCycleTime() {
     return BASE_CYCLE_TIME / hueShiftSpeed;
   }
 
   window.addEventListener("DOMContentLoaded", initSliders);
 
-  function initSliders(){
+  function initSliders() {
     const fadeTimeSlider = document.getElementById('fadeTimeSlider');
     fadeTimeSlider.min = F_TIME_MIN;
     fadeTimeSlider.max = F_TIME_MAX;
@@ -232,78 +225,89 @@
     document.getElementById('hueShiftSpeedVal').textContent = hueShiftSpeed;
   }
 
-  function adjustHue(color, shift){
+  function adjustHue(color, shift) {
     const rgb = d3.rgb(color);
     const r = rgb.r / 255;
     const g = rgb.g / 255;
     const b = rgb.b / 255;
-    const max = Math.max(r,g,b);
-    const min = Math.min(r,g,b);
-    const delta = max-min;
 
-    let h=0;
-    if(delta!==0){
-      if(max===r)h=((g-b)/delta+(g<b?6:0))*60;
-      else if(max===g)h=((b-r)/delta+2)*60;
-      else h=((r-g)/delta+4)*60;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let h = 0;
+    if (delta !== 0) {
+      if (max === r) {
+        h = ((g - b) / delta + (g < b ? 6 : 0)) * 60;
+      } else if (max === g) {
+        h = ((b - r) / delta + 2) * 60;
+      } else {
+        h = ((r - g) / delta + 4) * 60;
+      }
     }
-    const s=(max===0?0:delta/max);
-    const v=max;
-    h=(h+shift)%360;
+    const s = (max === 0 ? 0 : delta / max);
+    const v = max;
 
-    const c=v*s;
-    const x=c*(1-Math.abs((h/60)%2-1));
-    const m=v-c;
-    let r1=0,g1=0,b1=0;
-    if(h<60)  [r1,g1,b1]=[c,x,0];
-    else if(h<120)[r1,g1,b1]=[x,c,0];
-    else if(h<180)[r1,g1,b1]=[0,c,x];
-    else if(h<240)[r1,g1,b1]=[0,x,c];
-    else if(h<300)[r1,g1,b1]=[x,0,c];
-    else        [r1,g1,b1]=[c,0,x];
+    h = (h + shift) % 360;
+    const c = v * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = v - c;
 
-    return d3.rgb((r1+m)*255,(g1+m)*255,(b1+m)*255);
+    let r1 = 0, g1 = 0, b1 = 0;
+    if      (h < 60)  [r1,g1,b1] = [c, x, 0];
+    else if (h < 120) [r1,g1,b1] = [x, c, 0];
+    else if (h < 180) [r1,g1,b1] = [0, c, x];
+    else if (h < 240) [r1,g1,b1] = [0, x, c];
+    else if (h < 300) [r1,g1,b1] = [x, 0, c];
+    else              [r1,g1,b1] = [c, 0, x];
+
+    return d3.rgb((r1 + m)*255, (g1 + m)*255, (b1 + m)*255);
   }
 
-  const originalPalette=["#54092A","#E72339","#FC523B","#FF7B30","#FFD300","#FFFFFF"];
-  function buildRandomGradient(){
-    const direction=Math.floor(Math.random()*360);
+  const originalPalette = ["#54092A", "#E72339", "#FC523B", "#FF7B30", "#FFD300", "#FFFFFF"];
+  function buildRandomGradient() {
+    const direction = Math.floor(Math.random() * 360);
     console.log(`Random gradient direction=${direction}`);
-    const shiftedStops=originalPalette.map(c=>adjustHue(c,direction));
-    const domain=[0,0.2,0.4,0.6,0.8,1];
-    return d3.scaleLinear().domain(domain).range(shiftedStops).interpolate(d3.interpolateRgb);
+    const shiftedStops = originalPalette.map(c => adjustHue(c, direction));
+    const domain = [0, 0.2, 0.4, 0.6, 0.8, 1];
+    return d3.scaleLinear()
+      .domain(domain)
+      .range(shiftedStops)
+      .interpolate(d3.interpolateRgb);
   }
 
   const defaultGradientScale = d3.scaleLinear()
-    .domain([0,0.2,0.4,0.6,0.8,1])
+    .domain([0, 0.2, 0.4, 0.6, 0.8, 1])
     .range(originalPalette)
     .interpolate(d3.interpolateRgb);
 
-  function getGradientScale(){
+  function getGradientScale() {
     return useRandomGradient ? buildRandomGradient() : defaultGradientScale;
   }
 
-  function generateData(){
-    return Array.from({length:numPoints},(_,i)=>({
-      x:Math.random()*width,
-      y:Math.random()*height,
-      index:i
+  function generateData() {
+    return Array.from({ length: numPoints }, (_, i) => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      index: i
     }));
   }
-  function calculateGradientValue(x,y){
-    const diag=Math.sqrt(width**2+height**2);
-    const dist=Math.sqrt(x**2+y**2);
-    return dist/diag;
+
+  function calculateGradientValue(x, y) {
+    const diag = Math.sqrt(width**2 + height**2);
+    const dist = Math.sqrt(x**2 + y**2);
+    return dist / diag;
   }
-  function findNeighbors(pointIndex,delaunay){
-    const neighbors=new Set();
-    const tri=delaunay.triangles;
-    tri.forEach((_,i)=>{
-      if(i%3===0){
-        const simplex=[tri[i],tri[i+1],tri[i+2]];
-        if(simplex.includes(pointIndex)){
-          simplex.forEach(v=>{
-            if(v!==pointIndex) neighbors.add(v);
+
+  function findNeighbors(pointIndex, delaunay) {
+    const neighbors = new Set();
+    const tri = delaunay.triangles;
+    tri.forEach((_, i) => {
+      if (i % 3 === 0) {
+        const simplex = [tri[i], tri[i + 1], tri[i + 2]];
+        if (simplex.includes(pointIndex)) {
+          simplex.forEach(v => {
+            if (v !== pointIndex) neighbors.add(v);
           });
         }
       }
@@ -311,155 +315,160 @@
     return [...neighbors];
   }
 
-  const svg=d3.create("svg").style("background-color","#1a1a1a");
+  const svg = d3.create("svg").style("background-color", "#1a1a1a");
 
-  function toggleConstantHueShift(checked){
-    isConstantHueShiftOn=checked;
-    if(isConstantHueShiftOn)startConstantHueShift();
+  function toggleConstantHueShift(checked) {
+    isConstantHueShiftOn = checked;
+    if (isConstantHueShiftOn) startConstantHueShift();
     else stopConstantHueShift();
   }
-  function startConstantHueShift(){
-    if(hueShiftTimer)hueShiftTimer.stop();
-    startTime=Date.now();
-    baseColors={};
-    svg.selectAll("path").each(function(d){
-      if(d){
-        baseColors[d.index]=d3.select(this).attr("fill");
+
+  function startConstantHueShift() {
+    if (hueShiftTimer) hueShiftTimer.stop();
+    startTime = Date.now();
+    baseColors = {};
+    svg.selectAll("path").each(function(d) {
+      if (d) {
+        baseColors[d.index] = d3.select(this).attr("fill");
       }
     });
-    hueShiftTimer=d3.timer(()=>{
-      const cycleTime=getCycleTime();
-      const elapsed=(Date.now()-startTime)%cycleTime;
-      const shiftValue=(elapsed/cycleTime)*360;
-      svg.selectAll("path").each(function(d){
-        if(!d)return;
-        const baseCol=baseColors[d.index];
-        const newFill=adjustHue(baseCol,shiftValue);
-        d3.select(this).attr("fill",newFill);
+    hueShiftTimer = d3.timer(() => {
+      const cycleTime = getCycleTime();
+      const elapsed = (Date.now() - startTime) % cycleTime;
+      const shiftValue = (elapsed / cycleTime) * 360;
+      svg.selectAll("path").each(function(d) {
+        if (!d) return;
+        const baseCol = baseColors[d.index];
+        const newFill = adjustHue(baseCol, shiftValue);
+        d3.select(this).attr("fill", newFill);
       });
     });
   }
-  function stopConstantHueShift(){
-    if(hueShiftTimer){
+
+  function stopConstantHueShift() {
+    if (hueShiftTimer) {
       hueShiftTimer.stop();
-      hueShiftTimer=null;
+      hueShiftTimer = null;
     }
   }
-  function handleRandomGradientToggle(checked){
-    useRandomGradient=checked;
+
+  function handleRandomGradientToggle(checked) {
+    useRandomGradient = checked;
     renderVoronoi();
   }
 
-  function renderVoronoi(){
-    if(isConstantHueShiftOn)stopConstantHueShift();
-    svg.attr("width",width).attr("height",height);
+  function renderVoronoi() {
+    if (isConstantHueShiftOn) stopConstantHueShift();
+    svg.attr("width", width).attr("height", height);
 
-    const data=generateData();
-    const delaunay=d3.Delaunay.from(data,d=>d.x,d=>d.y);
-    const voronoi=delaunay.voronoi([0,0,width,height]);
+    const data = generateData();
+    const delaunay = d3.Delaunay.from(data, d => d.x, d => d.y);
+    const voronoi = delaunay.voronoi([0, 0, width, height]);
 
-    const chosenGradient=getGradientScale();
-    const cells=data.map(d=>{
-      const gv=calculateGradientValue(d.x,d.y);
-      return{
-        index:d.index,
-        path:voronoi.renderCell(d.index),
-        initialColor:chosenGradient(gv)
+    const chosenGradient = getGradientScale();
+    const cells = data.map(d => {
+      const gv = calculateGradientValue(d.x, d.y);
+      return {
+        index: d.index,
+        path: voronoi.renderCell(d.index),
+        initialColor: chosenGradient(gv)
       };
     });
-    const paths=svg.selectAll("path")
-      .data(cells,d=>d.index)
+    const paths = svg.selectAll("path")
+      .data(cells, d => d.index)
       .join("path")
-      .attr("d",d=>(d.path||"")+"Z")
-      .attr("fill","white")
-      .style("stroke","none")
-      .style("shape-rendering","crispEdges");
+      .attr("d", d => (d.path || "") + "Z")
+      .attr("fill", "white")
+      .style("stroke", "none")
+      .style("shape-rendering", "crispEdges");
 
     paths.transition()
       .duration(1000)
-      .attr("fill",d=>d.initialColor)
-      .on("end",function(d){
-        baseColors[d.index]=d3.select(this).attr("fill");
+      .attr("fill", d => d.initialColor)
+      .on("end", function(d) {
+        baseColors[d.index] = d3.select(this).attr("fill");
       });
 
-    paths.on("click",function(event,d){
-      const visited=new Set();
-      const randomHueShift=Math.floor(Math.random()*360);
+    paths.on("click", function (event, d) {
+      const visited = new Set();
+      const randomHueShift = Math.floor(Math.random() * 360);
       console.log(`Tile ${d.index} clicked (hue shift: ${randomHueShift})`);
-      cascadeAdjacentTiles(delaunay,d.index,randomHueShift,paths,visited);
+      cascadeAdjacentTiles(delaunay, d.index, randomHueShift, paths, visited);
     });
-    if(!svg.node().parentNode){
+    if (!svg.node().parentNode) {
       document.body.appendChild(svg.node());
     }
-    setTimeout(()=>{
-      if(isConstantHueShiftOn){
-        svg.selectAll("path").each(function(d){
-          if(d) baseColors[d.index]=d3.select(this).attr("fill");
+    setTimeout(() => {
+      if (isConstantHueShiftOn) {
+        svg.selectAll("path").each(function(d) {
+          if (d) baseColors[d.index] = d3.select(this).attr("fill");
         });
         startConstantHueShift();
       }
-    },1100);
+    }, 1100);
   }
 
-  function cascadeAdjacentTiles(delaunay,currentIndex,hueShift,paths,visited){
-    if(visited.has(currentIndex))return;
+  function cascadeAdjacentTiles(delaunay, currentIndex, hueShift, paths, visited) {
+    if (visited.has(currentIndex)) return;
     visited.add(currentIndex);
     console.log(`Visiting tile ${currentIndex} in BFS.`);
 
-    const tilePath=paths.filter(dd=>dd.index===currentIndex);
-    if(!tilePath.empty()){
-      const currentColor=tilePath.attr("fill");
-      const newColor=adjustHue(currentColor,hueShift);
+    const tilePath = paths.filter(dd => dd.index === currentIndex);
+    if (!tilePath.empty()) {
+      const currentColor = tilePath.attr("fill");
+      const newColor = adjustHue(currentColor, hueShift);
       tilePath.transition()
         .duration(TRANSITION_DURATION)
-        .attr("fill",newColor)
-        .on("end",function(){
-          const finalColor=d3.select(this).attr("fill");
+        .attr("fill", newColor)
+        .on("end", function() {
+          const finalColor = d3.select(this).attr("fill");
           console.log(`Tile ${currentIndex} BFS transition ended with color: ${finalColor}`);
-          baseColors[currentIndex]=finalColor;
+          baseColors[currentIndex] = finalColor;
         });
     }
-    setTimeout(()=>{
-      const neighbors=findNeighbors(currentIndex,delaunay);
-      neighbors.forEach(n=>{
-        if(!visited.has(n)){
-          cascadeAdjacentTiles(delaunay,n,hueShift,paths,visited);
+    setTimeout(() => {
+      const neighbors = findNeighbors(currentIndex, delaunay);
+      neighbors.forEach(n => {
+        if (!visited.has(n)) {
+          cascadeAdjacentTiles(delaunay, n, hueShift, paths, visited);
         }
       });
-    },DELAY_BETWEEN_LAYERS);
+    }, DELAY_BETWEEN_LAYERS);
   }
-  function handleResize(){
-    width=window.innerWidth;
-    height=window.innerHeight;
-    renderVoronoi();
-  }
-  window.addEventListener("resize",handleResize);
 
-  function updateFadeTime(value){
-    TRANSITION_DURATION=parseInt(value);
-    document.getElementById('fadeTimeVal').textContent=value;
-    console.log("Fade time updated to:",TRANSITION_DURATION);
-  }
-  function updateDelay(value){
-    DELAY_BETWEEN_LAYERS=parseInt(value);
-    document.getElementById('delayVal').textContent=value;
-    console.log("Delay updated to:",DELAY_BETWEEN_LAYERS);
-  }
-  function updateTileCount(value){
-    numPoints=parseInt(value);
-    document.getElementById('tileCountVal').textContent=value;
-    console.log("Tile count updated to:",numPoints);
+  function handleResize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
     renderVoronoi();
   }
-  function updateHueShiftSpeed(value){
-    hueShiftSpeed=parseFloat(value);
-    document.getElementById('hueShiftSpeedVal').textContent=value;
-    console.log("Hue Shift Speed updated to:",hueShiftSpeed);
-    if(isConstantHueShiftOn){
+  window.addEventListener("resize", handleResize);
+
+  function updateFadeTime(value) {
+    TRANSITION_DURATION = parseInt(value);
+    document.getElementById('fadeTimeVal').textContent = value;
+    console.log("Fade time updated to:", TRANSITION_DURATION);
+  }
+  function updateDelay(value) {
+    DELAY_BETWEEN_LAYERS = parseInt(value);
+    document.getElementById('delayVal').textContent = value;
+    console.log("Delay updated to:", DELAY_BETWEEN_LAYERS);
+  }
+  function updateTileCount(value) {
+    numPoints = parseInt(value);
+    document.getElementById('tileCountVal').textContent = value;
+    console.log("Tile count updated to:", numPoints);
+    renderVoronoi();
+  }
+  function updateHueShiftSpeed(value) {
+    hueShiftSpeed = parseFloat(value);
+    document.getElementById('hueShiftSpeedVal').textContent = value;
+    console.log("Hue Shift Speed updated to:", hueShiftSpeed);
+    if (isConstantHueShiftOn) {
       stopConstantHueShift();
       startConstantHueShift();
     }
   }
+
   renderVoronoi();
 </script>
 </body>
